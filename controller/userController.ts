@@ -9,23 +9,29 @@ const userController = {
     const { rawText } = req.body;
     const chunks = smartChunker(rawText);
     const process_Id = uIdGenerator();
-    const userEmail = req.body.email;
+    const userEmail = req.headers.email;
+    const user = await UserModel.findOne({ email: userEmail });
+
     const query = {
       processId: process_Id,
       status: "Processing",
-      userId: userEmail,
+      userId: user.id,
       result: {},
     };
     const newQuery = new QueryModel(query);
     await newQuery.save();
 
+    res.status(200).send({ processId: process_Id });
+
     let prevRes = {};
     const formattedText = [];
-    chunks.forEach(async (chunk) => {
+
+    for await (const chunk of chunks) {
       let formatterJSON = await LlmHandler(chunk, prevRes);
       prevRes = formatterJSON;
       formattedText.push(formatterJSON);
-    });
+  }
+
     newQuery.status = "Completed";
     newQuery.result = formattedText;
     await newQuery.save();
@@ -35,7 +41,7 @@ const userController = {
       { $push: { queries: process_Id } }
     );
 
-    res.status(200).send(formattedText);
+    
   },
 
   query: async (req: Request, res: Response) => {
@@ -53,7 +59,7 @@ const userController = {
     if (!user) {
       res.status(404).send("User not found");
     }
-    const queries = await QueryModel.find({ userId: user.email });
+    const queries = await QueryModel.find({ userId: user.id });
     res.status(200).json({ email: user.email, name: user.name , queries });
   },
   

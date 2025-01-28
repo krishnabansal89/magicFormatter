@@ -9,7 +9,8 @@ try {
   dotenv.config({ path: ".env" });
 } catch (error) {
   // Silently fail in production (Azure handles env vars)
-  console.error("No .env file found");
+  console.error("No .env file found "); 
+
 }
 
 const app: Express = express();

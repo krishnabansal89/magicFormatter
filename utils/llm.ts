@@ -484,6 +484,10 @@ export default async function LlmHandler(
   current_raw_text: string,
   previous_json: Object
 ) {
+  console.log("LlmHandler\n\n");
+  console.log("current_raw_text\n\n", current_raw_text);
+  console.log("previous_json\n\n", previous_json);
+  
   const response = await client.chat.completions.create({
     messages: [
       {
@@ -673,5 +677,6 @@ export default async function LlmHandler(
     model: "gpt-4o",
     response_format: { type: "json_object" },
   });
-  return response;
+  const json_resposne = await JSON.parse(response.choices[0].message.content);
+  return json_resposne;
 }

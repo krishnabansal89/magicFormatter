@@ -75,4 +75,4 @@ jobs:
           package: deployment-files # Point to the unzipped folder
           # If your app uses a startup file (e.g., `dist/index.js`), set this in Azure:
           # startup-command: 'npm start'
-          start-up-command: 'npm install --production && npm start'
+          startup-command: 'npm install --production && npm start'

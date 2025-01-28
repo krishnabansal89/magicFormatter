@@ -27,12 +27,11 @@ jobs:
       - name: Build TypeScript
         run: npm run build # Ensure this compiles TS to JS (e.g., outputs to `dist/`)
 
-      - name: Prune dev dependencies
-        run: npm prune --production # Remove dev dependencies
+   
 
       - name: Zip deployment artifact
         run: |
-          zip -r release.zip ./* -x "*.git*" -x "*.github*" -x "node_modules/*"
+          zip -r release.zip ./* -x "*.git*" -x "*.github*" 
           # Include only necessary files (e.g., `dist/`, `package.json`, `.env.production`)
 
       - name: Upload artifact

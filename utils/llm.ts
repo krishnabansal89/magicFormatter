@@ -1,4 +1,6 @@
 import { AzureOpenAI } from "openai";
+import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
+import { AzureKeyCredential } from "@azure/core-auth";
 
 const deployment = "gpt-4o";
 const apiVersion = "2024-08-01-preview";
@@ -482,17 +484,20 @@ Environmental impact of cooling systems
 `;
 export default async function LlmHandler(
   current_raw_text: string,
-  previous_json: Object
+  previous_json: Object,
+  revisedModel: boolean,
+  violations?: Object,
+  improvements?: Object,
 ) {
-  console.log("LlmHandler\n\n");
-  console.log("current_raw_text\n\n", current_raw_text);
-  console.log("previous_json\n\n", previous_json);
-  
-  const response = await client.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content: String.raw`
+  // console.log("LlmHandler\n\n");
+  // console.log("current_raw_text\n\n", current_raw_text);
+  // console.log("previous_json\n\n", previous_json);
+  if (!revisedModel) {
+    const response = await client.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: String.raw`
         You are a Document Structure Analyzer trained to convert raw text into structured JSON format. Your role is to:
   
   1. Analyze the semantic structure of input text
@@ -558,10 +563,10 @@ export default async function LlmHandler(
   
   Your output must strictly follow the provided JSON schema and maintain document integrity while capturing semantic structure.
    `,
-      },
-      {
-        role: "user",
-        content: String.raw`
+        },
+        {
+          role: "user",
+          content: String.raw`
        INPUT: current document chunk ${current_raw_text}
        PREVIOUS_CONTEXT_JSON : ${JSON.stringify(previous_json)}
   
@@ -590,93 +595,550 @@ export default async function LlmHandler(
   
   OUTPUT FORMAT: Structured JSON with clear segment categorization and relationships
         `,
-      },
-      {
-        role: "assistant",
-        content: String.raw`
+        },
+        {
+          role: "assistant",
+          content: String.raw`
         Assistant Template
   
-  {
-    "document_metadata": {
-      "type": "technical_documentation",
-      "version": "1.0",
-      "generated_timestamp": "2025-01-13T10:30:00Z"
+  ${JSON.stringify({
+    document_metadata: {
+      type: "technical_documentation",
+      version: "1.0",
+      generated_timestamp: "2025-02-05T10:30:00Z",
+      language: "en",
+      processing_status: "complete",
     },
-    "segments": [
+    segments: [
       {
-        "id": "doc_title_001",
-        "category": "TITLE",
-        "content": "Vastu Guidelines for Home Design",
-        "relationships": {
-          "parent": null,
-          "children": ["section_001", "section_002"],
-          "siblings": [],
-          "references": []
+        id: "title_001",
+        category: "TITLE",
+        content: "Complete Documentation Structure Example",
+        relationships: {
+          parent: null,
+          children: ["h1_001", "h1_002"],
+          siblings: [],
+          references: [],
         },
-        "metadata": {
-          "depth": 0,
-          "sequence": 1
-        }
+        metadata: {
+          depth: 0,
+          sequence: 1,
+        },
       },
       {
-        "id": "section_001",
-        "category": "H1",
-        "content": "General Orientation",
-        "relationships": {
-          "parent": "doc_title_001",
-          "children": ["subsection_001", "subsection_002"],
-          "siblings": ["section_002"],
-          "references": []
+        id: "h1_001",
+        category: "H1",
+        content: "First Main Section",
+        relationships: {
+          parent: "title_001",
+          children: ["h2_001", "body_001", "list_bullet_001"],
+          siblings: ["h1_002"],
+          references: [],
         },
-        "metadata": {
-          "depth": 1,
-          "sequence": 2
-        }
+        metadata: {
+          depth: 1,
+          sequence: 2,
+        },
       },
       {
-        "id": "subsection_001",
-        "category": "LIST_BULLET",
-        "content": {
-          "items": [
+        id: "h2_001",
+        category: "H2",
+        content: "Subsection Example",
+        relationships: {
+          parent: "h1_001",
+          children: ["h3_001", "body_002"],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 3,
+        },
+      },
+      {
+        id: "h3_001",
+        category: "H3",
+        content: "Detailed Level Section",
+        relationships: {
+          parent: "h2_001",
+          children: ["body_003"],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 3,
+          sequence: 4,
+        },
+      },
+      {
+        id: "body_001",
+        category: "BODY_TEXT",
+        content:
+          "This is a standard paragraph of body text that demonstrates proper content structure.",
+        relationships: {
+          parent: "h1_001",
+          children: [],
+          siblings: ["list_bullet_001"],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 5,
+        },
+      },
+      {
+        id: "list_bullet_001",
+        category: "LIST_BULLET",
+        content: {
+          items: [
             {
-              "title": "Main Entrance",
-              "description": "Preferably in the north, east, or northeast direction"
+              title: "First Bullet Point",
+              description: "Detailed explanation of the first bullet point",
             },
             {
-              "title": "Living Room",
-              "description": "Should ideally be in the northeast, north, or east"
-            }
-          ]
+              title: "Second Bullet Point",
+              description: "Detailed explanation of the second bullet point",
+            },
+          ],
         },
-        "relationships": {
-          "parent": "section_001",
-          "children": [],
-          "siblings": ["subsection_002"],
-          "references": []
+        relationships: {
+          parent: "h1_001",
+          children: [],
+          siblings: ["body_001"],
+          references: [],
         },
-        "metadata": {
-          "depth": 2,
-          "sequence": 3,
-          "list_type": "bullet"
-        }
-      }
-    ],
-    "document_flow": {
-      "type": "hierarchical",
-      "flow_sequence": ["doc_title_001", "section_001", "subsection_001"],
-      "semantic_groups": {
-        "orientation_guidelines": ["section_001", "subsection_001"],
-        "room_placement": ["section_002"]
-      }
-    }
-  }
-          `,
+        metadata: {
+          depth: 2,
+          sequence: 6,
+        },
+      },
+      {
+        id: "list_numbered_001",
+        category: "LIST_NUMBERED",
+        content: {
+          items: [
+            {
+              title: "First Step",
+              description: "Detailed explanation of step one",
+            },
+            {
+              title: "Second Step",
+              description: "Detailed explanation of step two",
+            },
+          ],
+        },
+        relationships: {
+          parent: "h1_002",
+          children: [],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 7,
+        },
+      },
+      {
+        id: "blockquote_001",
+        category: "BLOCKQUOTE",
+        content: {
+          quote: "This is an important quoted text that needs emphasis",
+          source: "Reference Source",
+          context: "Additional context for the quote",
+        },
+        relationships: {
+          parent: "h1_002",
+          children: [],
+          siblings: ["list_numbered_001"],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 8,
+        },
+      },
+      {
+        id: "table_001",
+        category: "TABLE_HEADER",
+        content: {
+          columns: ["Column 1", "Column 2", "Column 3"],
+          alignment: ["left", "center", "right"],
+        },
+        relationships: {
+          parent: "h1_002",
+          children: ["table_content_001"],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 9,
+        },
+      },
+      {
+        id: "table_content_001",
+        category: "TABLE_CONTENT",
+        content: {
+          rows: [
+            ["Data 1", "Data 2", "Data 3"],
+            ["Data 4", "Data 5", "Data 6"],
+          ],
+        },
+        relationships: {
+          parent: "table_001",
+          children: [],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 3,
+          sequence: 10,
+        },
+      },
+      {
+        id: "code_001",
+        category: "CODE_BLOCK",
+        content: {
+          code: "function example() {\n    return 'Hello World';\n}",
+          language: "javascript",
+          highlights: [1, 2],
+        },
+        relationships: {
+          parent: "h1_002",
+          children: [],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 11,
+        },
       },
     ],
-    max_tokens: 16384,
-    model: "gpt-4o",
-    response_format: { type: "json_object" },
+    document_flow: {
+      type: "hierarchical",
+      flow_sequence: [
+        "title_001",
+        "h1_001",
+        "h2_001",
+        "h3_001",
+        "body_001",
+        "list_bullet_001",
+        "list_numbered_001",
+        "blockquote_001",
+        "table_001",
+        "table_content_001",
+        "code_001",
+      ],
+      semantic_groups: {
+        main_content: ["h1_001", "body_001", "list_bullet_001"],
+        technical_content: ["code_001", "table_001"],
+      },
+    },
+  })}
+          `,
+        },
+      ],
+      max_tokens: 16384,
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+    });
+    const json_resposne = await JSON.parse(response.choices[0].message.content);
+    return json_resposne;
+  }
+  else {
+    const response = await client.chat.completions.create({
+        "messages": [
+          {
+            "role": "system",
+            "content": String.raw`
+      You are a Document Structure Repair Specialist with deep expertise in fixing JSON structural issues. Your core mission is to analyze evaluation feedback and methodically repair document structures.
+      
+      CONTEXT ANALYSIS:
+      Let me process the situation systematically...
+      
+      1. We have a JSON structure that fell below quality thresholds
+      2. We have detailed violation reports and improvement suggestions
+      3. We have the original raw text that generated this structure
+      4. We need to rebuild while preserving valid elements
+      
+      REPAIR FRAMEWORK:
+      
+      1. Violation Pattern Recognition
+         - Examine each reported violation meticulously
+         - Categorize issues by severity and type
+         - Identify root causes, not just symptoms
+         - Map patterns of recurring problems
+      
+      2. Structural Analysis
+         - What elements are fundamentally sound?
+         - Which patterns need complete rebuilding?
+         - How do violations interconnect?
+         - Where are the cascade effects?
+      
+      3. Repair Strategy Formation
+         - Begin with critical violations
+         - Maintain working components
+         - Rebuild compromised sections
+         - Verify fixes don't create new issues
+      
+    
+        }
+      })}
+      
+      REPAIR METHODOLOGY:
+      
+      1. Critical Repairs
+         - Fix hierarchy violations
+         - Restore proper content patterns
+         - Rebuild broken relationships
+         - Validate parent-child links
+      
+      2. Major Improvements
+         - Restructure malformed lists
+         - Correct content categorization
+         - Fix sequence breaks
+         - Align depth levels
+      
+      3. Optimization
+         - Enhance semantic grouping
+         - Improve metadata completeness
+         - Strengthen relationships
+         - Refine content distribution
+      
+      Your task is to:
+      1. Analyze all feedback meticulously
+      2. Develop targeted repair strategies
+      3. Implement fixes systematically
+      4. Verify improvements
+      5. Maintain document integrity
+      6. Preserve valid content
+      7. Document all changes
+      
+      Think through each repair step carefully, questioning assumptions and validating changes.`
+          },
+          {
+            "role": "user",
+            "content": String.raw`
+      INPUT:
+      {
+        "original_json": ${JSON.stringify(previous_json)},
+        "raw_text": "${current_raw_text}",
+        "evaluation_feedback": {
+          "violations": ${JSON.stringify(violations)},
+          "improvements": ${JSON.stringify(improvements)},
+        }
+      }
+      
+      REPAIR INSTRUCTIONS:
+      
+      Let's approach this systematically...
+      
+      1. Assessment Phase
+         - Review each violation carefully
+         - Map improvement suggestions
+         - Identify optimization opportunities
+         - Note interdependencies
+      
+      2. Planning Phase
+         - Prioritize critical fixes
+         - Design repair sequence
+         - Consider ripple effects
+         - Plan verification steps
+      
+      3. Implementation Phase
+         - Execute repairs methodically
+         - Validate each change
+         - Maintain relationships
+         - Preserve valid content
+      
+      4. Verification Phase
+         - Check pattern compliance
+         - Verify relationships
+         - Confirm improvements
+         - Test structural integrity
+      
+      Generate a completely rebuilt JSON structure that resolves all identified issues while maintaining document integrity.
+      
+      OUTPUT REQUIREMENTS:
+      - Complete, valid JSON structure
+      - All violations addressed
+      - Improvements implemented
+      - Optimizations applied
+      - Relationships preserved
+      - Document flow maintained`
+          }
+        ],
+      max_tokens: 16384,
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+    });
+    const json_resposne = await JSON.parse(response.choices[0].message.content);
+    return json_resposne;
+  }
+}
+
+export async function LLMEvaluator(input_json: Object , previous_json: Object) {
+  
+  const client = ModelClient(
+    "https://ai-saashub485614076288.services.ai.azure.com/models",
+    new AzureKeyCredential(process.env.AZURE_AI_KEY)
+  );
+
+  const response = await client.path("/chat/completions").post({
+    body: {
+      "messages": [
+        {
+          "role": "system",
+          "content": String.raw`
+    You are a Document Structure Evaluator analyzing JSON outputs from a chunk-based processing system. Let me carefully consider the implications...
+    
+    FUNDAMENTAL UNDERSTANDING:
+    The document processing occurs across multiple chunks. This means:
+    - The full document is split into sequential pieces
+    - Each chunk contains a portion of the complete document
+    - Context flows between chunks through previous JSON
+    - Traditional document requirements must adapt to this reality
+    
+    CORE EVALUATION PRINCIPLES:
+    
+    1. Structural Pattern Integrity (60% weight)
+       Let me break this down...
+       
+       For All Content Types:
+       - LIST_BULLET and LIST_NUMBERED must use title-description pairs
+       - BLOCKQUOTE requires quote, source, and context
+       - TABLE structures need proper header and content separation
+       - CODE_BLOCK must include language and content
+       
+       Key Question: Does each content element, regardless of chunk position, maintain proper internal structure?
+    
+    2. Hierarchical Continuity (40% weight)
+       Thinking deeper about hierarchy...
+       
+       Context-Aware Requirements:
+       - If previous JSON exists, current chunk must sensibly extend existing hierarchy
+       - Heading levels must make logical sense given context
+       - No requirement for TITLE in non-initial chunks
+       - H1/H2/H3 progression must be logical within available context
+       
+       Key Question: Does the structure flow naturally from previous context?
+    
+    EVALUATION ADJUSTMENTS:
+    Let me consider what this means for assessment...
+    
+    1. Title Expectations
+       - Do not penalize absence of TITLE in chunks with previous context
+       - Validate TITLE only when processing initial document portion
+       - Focus on structural integrity of content present
+    
+    2. Heading Progression
+       - Evaluate heading levels in context of previous chunk
+       - Allow any valid heading level if it maintains logical flow
+       - Consider cross-chunk section continuity
+    
+    3. Content Relationships
+       - Verify internal chunk relationships
+       - Validate connections to previous content when referenced
+       - Focus on local structure coherence
+    
+    VIOLATION SEVERITY:
+    
+    1. Critical Issues (Deducts 20-25%):
+       - Malformed content patterns (e.g., unstructured lists)
+       - Invalid internal relationships
+       - Structural pattern violations
+    
+    2. Major Issues (Deducts 10-15%):
+       - Illogical heading progression given context
+       - Inconsistent content categorization
+       - Relationship coherence problems
+    
+    3. Minor Issues (Deducts 5-10%):
+       - Suboptimal semantic grouping
+       - Missing optional metadata
+       - Minor structural inconsistencies
+    
+    OUTPUT REQUIREMENTS:
+    
+    <analysis>
+      <context_awareness>
+        <has_previous_context>boolean</has_previous_context>
+        <continuing_sections>[List of ongoing section contexts]</continuing_sections>
+      </context_awareness>
+    
+      <accuracy>
+        <overall_percentage>XX%</overall_percentage>
+        <category_scores>
+          <structural_patterns>XX%</structural_patterns>
+          <hierarchical_continuity>XX%</hierarchical_continuity>
+        </category_scores>
+      </accuracy>
+    
+      <violations>
+        <critical>[Pattern violations with examples]</critical>
+        <major>[Hierarchy issues with context]</major>
+        <minor>[Improvement suggestions]</minor>
+      </violations>
+    
+      <recommendations>
+        <structural>[Pattern improvement suggestions]</structural>
+        <hierarchical>[Context-aware hierarchy fixes]</hierarchical>
+      </recommendations>
+    </analysis>
+    
+    Think carefully about context when evaluating. Focus on pattern integrity and logical flow.`
+        },
+        {
+          "role": "user",
+          "content": String.raw`
+    INPUT:
+    {
+      "json_structure": ${JSON.stringify(input_json)},
+      "has_previous_context": ${previous_json ? "true" : "false"},
+      "previous_json": ${JSON.stringify(previous_json)}
+    }
+    
+    INSTRUCTIONS:
+    1. Consider whether this chunk has previous context
+    2. Evaluate structural patterns meticulously
+    3. Assess hierarchical continuity in context
+    4. Generate targeted recommendations
+    
+    Please provide your analysis following the required XML format.`
+        }
+      ],
+      model: "Llama-3.3-70B-Instruct",
+      response_format: { type: "json_object" },
+    },
   });
-  const json_resposne = await JSON.parse(response.choices[0].message.content);
-  return json_resposne;
+
+  if (isUnexpected(response)) {
+    console.error(response.body);
+    return;
+  }
+
+  const json_resposne = await JSON.parse(
+    response.body.choices[0].message.content
+  );
+  console.log(json_resposne);
+  let accuracy = json_resposne["analysis"]["accuracy"][
+    "overall_percentage"
+  ];
+
+  if (typeof(accuracy)==="string") accuracy = accuracy.slice(0, -1);
+
+  const suggestions = {
+    structural:
+      json_resposne["analysis"]["recommendations"]["structural"],
+    hierarchical:
+      json_resposne["analysis"]["recommendations"]["hierarchical"],
+  };
+  const violations = {
+    critical: json_resposne["analysis"]["violations"]["critical"],
+    major: json_resposne["analysis"]["violations"]["major"],
+    minor: json_resposne["analysis"]["violations"]["minor"],
+  };
+  
+  return { accuracy, suggestions, violations };
 }

@@ -1,6 +1,6 @@
 import { query, Request, Response } from "express";
 import { smartChunker, uIdGenerator } from "../utils/utilsFunc";
-import LlmHandler from "../utils/llm";
+import LlmHandler , {LLMEvaluator} from "../utils/llm";
 import { QueryModel } from "../models/queryModel";
 import { UserModel } from "../models/userModel";
 
@@ -27,11 +27,20 @@ const userController = {
     const formattedText = [];
 
     for await (const chunk of chunks) {
-      let formatterJSON = await LlmHandler(chunk, prevRes);
+      let formatterJSON = await LlmHandler(chunk, prevRes , false);
+      console.log("JSON\n\n" , formatterJSON , "\n\n");
+      const {accuracy , violations , suggestions } = await LLMEvaluator(formatterJSON , prevRes);
+
+      if (parseInt(accuracy,10) < 80 )
+      {
+        formatterJSON = await LlmHandler(chunk, formatterJSON , true , violations , suggestions ); 
+        const {accuracy } = await LLMEvaluator(formatterJSON , prevRes);
+        console.log("Accuracy is less than 80% , New Accuracy is ", accuracy , "\n\n");
+      }
+
       prevRes = formatterJSON;
       formattedText.push(formatterJSON);
   }
-
     newQuery.status = "Completed";
     newQuery.result = formattedText;
     await newQuery.save();

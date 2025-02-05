@@ -1,14 +1,16 @@
 const smartChunker = (text:string) => {
 
-    const paragraphs = text.split('\n');
+    let paragraphs = text.split("\n");
+    paragraphs = paragraphs.filter((paragraph) => paragraph.length > 0);
     let chunks = [];
     
     const CHUNK_LENGTH_THRESHOLD = 1000;
 
     const text_length = text.length;
+    // console.log(text_length , paragraphs.length);
     const chunkNumber = Math.floor(text_length / CHUNK_LENGTH_THRESHOLD);
 
-    for(let i=0; i<=chunkNumber;i++)
+    for(let i=0; i<chunkNumber;i++)
     {
         let chunk = '';
         let chunk_length = 0;

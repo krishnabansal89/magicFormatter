@@ -3,6 +3,7 @@ import { smartChunker, uIdGenerator } from "../utils/utilsFunc";
 import LlmHandler , {LLMEvaluator} from "../utils/llm";
 import { QueryModel } from "../models/queryModel";
 import { UserModel } from "../models/userModel";
+import { platform } from "os";
 
 const userController = {
   format: async (req: Request, res: Response) => {
@@ -69,7 +70,7 @@ const userController = {
       res.status(404).send("User not found");
     }
     const queries = await QueryModel.find({ userId: user.id });
-    res.status(200).json({ email: user.email, name: user.name , queries });
+    res.status(200).json({ email: user.email, name: user.name , queries , plan: user.plan });
   },
   
   registerUser : async (req: Request, res: Response) => {

@@ -3,15 +3,20 @@ import { smartChunker, uIdGenerator } from "../utils/utilsFunc";
 import LlmHandler , {LLMEvaluator} from "../utils/llm";
 import { QueryModel } from "../models/queryModel";
 import { UserModel } from "../models/userModel";
+import { LoggerModel } from "../models/logger";
 import { platform } from "os";
 
 const userController = {
   format: async (req: Request, res: Response) => {
     const { rawText } = req.body;
+    
+    try{
     const chunks = smartChunker(rawText);
     const process_Id = uIdGenerator();
     const userEmail = req.headers.email;
     const user = await UserModel.findOne({ email: userEmail });
+
+    
 
     const query = {
       processId: process_Id,
@@ -41,16 +46,24 @@ const userController = {
 
       prevRes = formatterJSON;
       formattedText.push(formatterJSON);
+      
   }
     newQuery.status = "Completed";
     newQuery.result = formattedText;
     await newQuery.save();
+    const log = new LoggerModel({ text: rawText, status: "Completed" });
+    await log.save();
 
     await UserModel.updateOne(
       { email: userEmail },
       { $push: { queries: process_Id } }
     );
-
+  }
+  catch (error) {
+    const log = new LoggerModel({ text: rawText, status: "Error", error: error.message });
+    await log.save();
+    res.status(500).send("Error occured");
+  }
     
   },
 

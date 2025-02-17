@@ -1,30 +1,48 @@
-const smartChunker = (text:string) => {
-
-    let paragraphs = text.split("\n");
-    paragraphs = paragraphs.filter((paragraph) => paragraph.length > 0);
-    let chunks = [];
-    
+const smartChunker = (text: string) => {
+    const paragraphs = text.split("\n").filter(paragraph => paragraph.length > 0);
+    const chunks: string[] = [];
     const CHUNK_LENGTH_THRESHOLD = 1000;
 
-    const text_length = text.length;
-    // console.log(text_length , paragraphs.length);
-    const chunkNumber = Math.floor(text_length / CHUNK_LENGTH_THRESHOLD);
+    let currentChunk: string[] = [];
+    let currentLength = 0;
 
-    for(let i=0; i<chunkNumber;i++)
-    {
-        let chunk = '';
-        let chunk_length = 0;
-        while(chunk_length < CHUNK_LENGTH_THRESHOLD && paragraphs.length > 0)
-        {
-            let paragraph = paragraphs.shift();
-            chunk += paragraph + '\n';
-            chunk_length += paragraph.length;
+    for (const paragraph of paragraphs) {
+        const paragraphLength = paragraph.length;
+        // Calculate new length including the newline character after the paragraph
+        const newLineLength = currentChunk.length > 0 ? 1 : 0; // Only add a newline if there's a previous paragraph
+        const potentialLength = currentLength + paragraphLength + newLineLength;
+
+        if (potentialLength > CHUNK_LENGTH_THRESHOLD) {
+            if (currentChunk.length > 0) {
+                // Finalize the current chunk
+                chunks.push(currentChunk.join('\n') + '\n');
+                currentChunk = [];
+                currentLength = 0;
+            }
+            // Check if the current paragraph alone exceeds the threshold (including its trailing newline)
+            if (paragraphLength + 1 > CHUNK_LENGTH_THRESHOLD) {
+                // Add as a single chunk despite exceeding the threshold
+                chunks.push(paragraph + '\n');
+            } else {
+                // Start new chunk with this paragraph
+                currentChunk.push(paragraph);
+                currentLength = paragraphLength + 1; // Include newline
+            }
+        } else {
+            // Add paragraph to the current chunk
+            currentChunk.push(paragraph);
+            currentLength += paragraphLength + newLineLength; // Add paragraph and possible newline
         }
-        chunks.push(chunk);
     }
 
+    // Add any remaining paragraphs in the current chunk
+    if (currentChunk.length > 0) {
+        chunks.push(currentChunk.join('\n') + '\n');
+    }
+    console.log(chunks);
+
     return chunks;
-}
+};
 
 const uIdGenerator = () => {
     return Math.random().toString(36).substr(2, 9);

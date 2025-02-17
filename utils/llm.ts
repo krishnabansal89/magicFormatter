@@ -1087,7 +1087,8 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
       </recommendations>
     </analysis>
     
-    Think carefully about context when evaluating. Focus on pattern integrity and logical flow.`
+    Think carefully about context when evaluating. Focus on pattern integrity and logical flow.
+    %OUTPUT REQUIREMENT MUST BE SAME PATTERN OTHERWISE YOU WILL BE PENALIZED%`
         },
         {
           "role": "user",
@@ -1125,7 +1126,7 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
   let accuracy = json_resposne["analysis"]["accuracy"][
     "overall_percentage"
   ];
-
+  console.log("Accuracy\n\n", accuracy);
   if (typeof(accuracy)==="string") accuracy = accuracy.slice(0, -1);
 
   const suggestions = {

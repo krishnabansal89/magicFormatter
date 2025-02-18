@@ -562,6 +562,7 @@ export default async function LlmHandler(
   - Include progress metadata
   - Mark document completion status
   
+  %ONE IMPORTANT PATCH :- LIST_BULLET_WITH_TITLE &  LIST_NUMBERED_WITH_TITLE must have description as string not as object , that is Description must contain only one element , not a list of elements if lists have title with them%
   
   Your output must strictly follow the provided JSON schema and maintain document integrity while capturing semantic structure.
    `,

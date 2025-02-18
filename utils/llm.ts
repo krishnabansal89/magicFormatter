@@ -513,8 +513,10 @@ export default async function LlmHandler(
   - TITLE
   - H1, H2, H3 (heading levels)
   - BODY_TEXT
-  - LIST_BULLET
-  - LIST_NUMBERED
+  - LIST_BULLET_WITH_TITLE
+  - LIST_NUMBERED_WITH_TITLE
+  - LIST_BULLET_WITHOUT_TITLE
+  - LIST_NUMBERED_WITHOUT_TITLE
   - BLOCKQUOTE
   - TABLE_HEADER
   - TABLE_CONTENT
@@ -688,7 +690,7 @@ export default async function LlmHandler(
       },
       {
         id: "list_bullet_001",
-        category: "LIST_BULLET",
+        category: "LIST_BULLET_WITH_TITLE",
         content: {
           items: [
             {
@@ -714,18 +716,10 @@ export default async function LlmHandler(
       },
       {
         id: "list_numbered_001",
-        category: "LIST_NUMBERED",
+        category: "LIST_NUMBERED_WITHOUT_TITLE",
         content: {
-          items: [
-            {
-              title: "First Step",
-              description: "Detailed explanation of step one",
-            },
-            {
-              title: "Second Step",
-              description: "Detailed explanation of step two",
-            },
-          ],
+          items: ["Detailed explanation of step one",
+           "Detailed explanation of step two"],
         },
         relationships: {
           parent: "h1_002",
@@ -990,157 +984,164 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
         {
           "role": "system",
           "content": String.raw`
-You are a Document Structure Validator with Enhanced List Focus. Prioritize:
+You are a Document Structure Validator with enhanced list handling. Prioritize:
 
-# CORE EVALUATION CRITERIA (100% weight)
+# CORE EVALUATION (100% weight)
+1. **List Integrity** (50%)
+   - WITH_TITLE vs WITHOUT_TITLE validation
+   - Parent-child relationships
+   - Chunk continuity
 
-1. **List Integrity** (50% weight)
-   - Strict title-description pairs
-   - Valid parent relationships
-   - Chunk continuity enforcement
-
-2. **Hierarchy Validation** (30% weight)
-   - Logical heading progression
+2. **Hierarchy Validation** (30%)
+   - Heading progression (H1-H3)
    - Depth consistency
-   - Cross-chunk section flow
+   - Cross-chunk flow
 
-3. **Global Structure** (20% weight)
+3. **Global Structure** (20%)
    - Table/Code-block formatting
    - Body text relationships
    - Metadata completeness
 
-# DETAILED VALIDATION RULES
+# UPDATED VALIDATION RULES
 
 <validation_matrix>
   <!-- Lists (50%) -->
-  <list_rules>
-    <critical>
-      - Missing description: -25% per item
-      - Invalid parent: -30%
-      - Broken continuation: -40%
-    </critical>
-    <major>
-      - Mixed list types: -15%
-      - Depth mismatch: -10%
-    </major>
-  </list_rules>
+  <list_types>
+    <with_title category="LIST_*_WITH_TITLE">
+      ✓ Must have {title, description} objects
+      ✗ String items = -25% per item
+      ✗ Missing description = -20%
+    </with_title>
+    
+    <without_title category="LIST_*_WITHOUT_TITLE">
+      ✓ Simple string items only
+      ✗ Object items = -30% per item
+      ✗ Mixed types = -15%
+    </without_title>
+    
+    <common_rules>
+      - Parent must be heading/body (H1-H3/BODY)
+      - Depth matches parent+1
+      - Chunk ID continuity
+    </common_rules>
+  </list_types>
 
-  <!-- Headings (30%) -->
-  <heading_rules>
+  <!-- Hierarchy (30%) -->
+  <headings>
     <critical>
-      - H1 without title: -25% (first chunk only)
-      - H3 without H2: -20%
+      - H1 without title (first chunk): -25%
+      - Depth jump >1 level: -15%/jump
     </critical>
     <major>
-      - Depth jump >1 level: -10%/jump
-      - Orphaned heading: -15%
+      - Orphaned headings: -10%
+      - Illogical sequence: -8%
     </major>
-  </heading_rules>
+  </headings>
 
   <!-- Global (20%) -->
-  <global_rules>
-    <critical>
-      - Malformed tables: -15%
-      - Code without language: -10%
-    </critical>
-    <major>
-      - Missing metadata: -5%
-      - Invalid references: -8%
-    </major>
-  </global_rules>
+  <global>
+    <tables>
+      - Column/row mismatch: -15%
+      - Invalid alignment: -10%
+    </tables>
+    <code_blocks>
+      - Missing language: -10%
+      - Unformatted code: -5%
+    </code_blocks>
+  </global>
 </validation_matrix>
 
-# OUTPUT REQUIREMENTS
+# VALIDATION EXAMPLES
 
-<validation_report format="xml_strict">
+<valid_cases>
+  <!-- WITH_TITLE List -->
+  <list category="LIST_BULLET_WITH_TITLE">
+    "content": {
+      "items": [
+        {"title": "Qubits", "description": "Quantum bits fundamentals"}
+      ]
+    }
+  </list>
+
+  <!-- WITHOUT_TITLE List -->
+  <list category="LIST_NUMBERED_WITHOUT_TITLE">
+    "content": {
+      "items": ["Step 1: Initialize", "Step 2: Measure"]
+    }
+  </list>
+</valid_cases>
+
+<invalid_cases>
+  <!-- WITH_TITLE Error -->
+  <list category="LIST_NUMBERED_WITH_TITLE">
+    "content": {
+      "items": ["Missing description object"] → -25%
+    }
+  </list>
+
+  <!-- WITHOUT_TITLE Error -->
+  <list category="LIST_BULLET_WITHOUT_TITLE">
+    "content": {
+      "items": [{"title": "Invalid object"}] → -30%
+    }
+  </list>
+</invalid_cases>
+
+# OUTPUT FORMAT
+
+<validation_report>
   <list_analysis weight="50%">
-    <total_lists>{count}</total_lists>
-    <valid_lists>
-      <list id="list_001" score="100%"/>
-    </valid_lists>
-    <invalid_lists>
-      <list id="list_002">
-        <errors>
-          <missing_description>2 items</missing_description>
-          <parent_mismatch>h1_003</parent_mismatch>
-        </errors>
-        <penalty>-55%</penalty>
-      </list>
-    </invalid_lists>
+    <with_title>
+      <count>2</count>
+      <errors>
+        <missing_description>1</missing_description>
+      </errors>
+    </with_title>
+    
+    <without_title>
+      <count>3</count>
+      <errors>
+        <object_items>2</object_items>
+      </errors>
+    </without_title>
   </list_analysis>
 
   <hierarchy_analysis weight="30%">
     <depth_violations>
-      <jump from="1" to="3" count="1"/>
+      <jump from="1" to="3"/> → -15%
     </depth_violations>
-    <orphaned_headings>
-      <heading id="h2_004"/>
-    </orphaned_headings>
-    <penalty>-25%</penalty>
   </hierarchy_analysis>
 
   <global_analysis weight="20%">
-    <table_errors count="2"/>
-    <code_errors count="1"/>
-    <penalty>-15%</penalty>
+    <table_errors count="1"/> → -5%
   </global_analysis>
 
-  <final_score>
-    <total>65%</total>
+  <total_score>
+    <value>75%</value>
     <thresholds>
-      <critical>Below 60% → Reprocess</critical>
-      <warning>60-80% → Review</warning>
+      <pass>≥70%</pass>
+      <review>60-69%</review>
+      <fail><60%</fail>
     </thresholds>
-  </final_score>
+  </total_score>
 </validation_report>
 
-# VALIDATION EXAMPLES
+# ENFORCEMENT RULES
+1. **List Handling**:
+   - Convert invalid WITH_TITLE→WITHOUT_TITLE (-15%)
+   - Split mixed lists into separate categories (-10%)
 
-<valid_structure>
-  <!-- List Example -->
-  <list id="list_001" category="LIST_BULLET">
-    <items>
-      <item>
-        <title>Quantum State</title>
-        <description>Representation of qubit configuration</description>
-      </item>
-    </items>
-    <parent>h1_001</parent>
-    <depth>2</depth>
-  </list>
+2. **Hierarchy Fixes**:
+   - Auto-correct depth jumps with warnings (-5%/jump)
+   - Re-parent orphaned headings to nearest valid parent
 
-  <!-- Hierarchy Example -->
-  <hierarchy>
-    <h1 id="h1_001">Introduction</h1>
-    <h2 id="h2_001">Background</h2>
-    <h3 id="h3_001">History</h3>
-  </hierarchy>
-</valid_structure>
+3. **Global Adjustments**:
+   - Add missing table alignment defaults (-5%)
+   - Infer code language from content (-8%)
 
-<invalid_structure>
-  <!-- Bad List -->
-  <list id="list_002" category="LIST_NUMBERED">
-    <items>
-      <item>
-        <title>Error Correction</title> <!-- Missing description -->
-      </item>
-    </items>
-    <parent>body_001</parent> <!-- Invalid parent -->
-  </list>
-
-  <!-- Bad Hierarchy -->
-  <hierarchy>
-    <h1 id="h1_001">Main Section</h1>
-    <h3 id="h3_001">Subsection</h3> <!-- Missing H2 -->
-  </hierarchy>
-</invalid_structure>
-
-# ENFORCEMENT PROTOCOL
-1. List errors trigger immediate alerts
-2. Hierarchy errors generate warnings
-3. Global errors log for batch correction
-4. Score <60% → Full reprocessing
-5. Repeated offenders → Model retraining
+4. **Chunk Processing**:
+   - Require continuation flags for multi-chunk lists
+   - Validate parent IDs across chunks
           `
         },
         {
@@ -1180,8 +1181,8 @@ You are a Document Structure Validator with Enhanced List Focus. Prioritize:
     response.body.choices[0].message.content
   );
   console.log(json_resposne);
-  let accuracy = json_resposne["validation_report"]["final_score"][
-    "total"
+  let accuracy = json_resposne["validation_report"]["total_score"][
+    "value"
   ];
   console.log("Accuracy\n\n", accuracy);
   if (typeof(accuracy)==="string") accuracy = accuracy.slice(0, -1);

@@ -1106,6 +1106,84 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
     3. Assess hierarchical continuity in context
     4. Generate targeted recommendations
     
+    %MAKE SURE TO PUT HEAVY PENALTY IF SOMEONE DON'T FOLLOW THE STRUTURE OF LISTS and TABLES (if present) %
+    %SAMPLE STRUTURE FOR LIST and TABLE_HEADER%
+      ${JSON.stringify(
+      {
+        id: "list_bullet_001",
+        category: "LIST_BULLET",
+        content: {
+          items: [
+            {
+              title: "First Bullet Point",
+              description: "Detailed explanation of the first bullet point",
+            },
+            {
+              title: "Second Bullet Point",
+              description: "Detailed explanation of the second bullet point",
+            },
+          ],
+        },
+        relationships: {
+          parent: "h1_001",
+          children: [],
+          siblings: ["body_001"],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 6,
+        },
+      },
+      {
+        id: "list_numbered_001",
+        category: "LIST_NUMBERED",
+        content: {
+          items: [
+            {
+              title: "First Step",
+              description: "Detailed explanation of step one",
+            },
+            {
+              title: "Second Step",
+              description: "Detailed explanation of step two",
+            },
+          ],
+        },
+        relationships: {
+          parent: "h1_002",
+          children: [],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 7,
+        },
+      },
+      
+      {
+        id: "table_001",
+        category: "TABLE_HEADER",
+        content: {
+          columns: ["Column 1", "Column 2", "Column 3"],
+          alignment: ["left", "center", "right"],
+        },
+        relationships: {
+          parent: "h1_002",
+          children: ["table_content_001"],
+          siblings: [],
+          references: [],
+        },
+        metadata: {
+          depth: 2,
+          sequence: 9,
+        },
+      }
+    )}
+      
+
+      
     Please provide your analysis following the required XML format.`
         }
       ],

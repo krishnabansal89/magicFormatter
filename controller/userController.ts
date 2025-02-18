@@ -37,7 +37,7 @@ const userController = {
       console.log("JSON\n\n" , formatterJSON , "\n\n");
       const {accuracy , violations , suggestions } = await LLMEvaluator(formatterJSON , prevRes);
 
-      if (parseInt(accuracy,10) < 80 )
+      if (parseInt(accuracy,10) < 90 )
       {
         formatterJSON = await LlmHandler(chunk, formatterJSON , true , violations , suggestions ); 
         const {accuracy } = await LLMEvaluator(formatterJSON , prevRes);

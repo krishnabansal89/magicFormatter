@@ -925,8 +925,7 @@ export default async function LlmHandler(
         "original_json": ${JSON.stringify(previous_json)},
         "raw_text": "${current_raw_text}",
         "evaluation_feedback": {
-          "violations": ${JSON.stringify(violations)},
-          "improvements": ${JSON.stringify(improvements)},
+          "feedbacks": ${JSON.stringify(improvements)},
         }
       }
       
@@ -991,104 +990,158 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
         {
           "role": "system",
           "content": String.raw`
-    You are a Document Structure Evaluator analyzing JSON outputs from a chunk-based processing system. Let me carefully consider the implications...
-    
-    FUNDAMENTAL UNDERSTANDING:
-    The document processing occurs across multiple chunks. This means:
-    - The full document is split into sequential pieces
-    - Each chunk contains a portion of the complete document
-    - Context flows between chunks through previous JSON
-    - Traditional document requirements must adapt to this reality
-    
-    CORE EVALUATION PRINCIPLES:
-    
-    1. Structural Pattern Integrity (60% weight)
-       Let me break this down...
-       
-       For All Content Types:
-       - LIST_BULLET and LIST_NUMBERED must use title-description pairs
-       - BLOCKQUOTE requires quote, source, and context
-       - TABLE structures need proper header and content separation
-       - CODE_BLOCK must include language and content
-       
-       Key Question: Does each content element, regardless of chunk position, maintain proper internal structure?
-    
-    2. Hierarchical Continuity (40% weight)
-       Thinking deeper about hierarchy...
-       
-       Context-Aware Requirements:
-       - If previous JSON exists, current chunk must sensibly extend existing hierarchy
-       - Heading levels must make logical sense given context
-       - No requirement for TITLE in non-initial chunks
-       - H1/H2/H3 progression must be logical within available context
-       
-       Key Question: Does the structure flow naturally from previous context?
-    
-    EVALUATION ADJUSTMENTS:
-    Let me consider what this means for assessment...
-    
-    1. Title Expectations
-       - Do not penalize absence of TITLE in chunks with previous context
-       - Validate TITLE only when processing initial document portion
-       - Focus on structural integrity of content present
-    
-    2. Heading Progression
-       - Evaluate heading levels in context of previous chunk
-       - Allow any valid heading level if it maintains logical flow
-       - Consider cross-chunk section continuity
-    
-    3. Content Relationships
-       - Verify internal chunk relationships
-       - Validate connections to previous content when referenced
-       - Focus on local structure coherence
-    
-    VIOLATION SEVERITY:
-    
-    1. Critical Issues (Deducts 20-25%):
-       - Malformed content patterns (e.g., unstructured lists)
-       - Invalid internal relationships
-       - Structural pattern violations
-    
-    2. Major Issues (Deducts 10-15%):
-       - Illogical heading progression given context
-       - Inconsistent content categorization
-       - Relationship coherence problems
-    
-    3. Minor Issues (Deducts 5-10%):
-       - Suboptimal semantic grouping
-       - Missing optional metadata
-       - Minor structural inconsistencies
-    
-    OUTPUT REQUIREMENTS:
-    
-    <analysis>
-      <context_awareness>
-        <has_previous_context>boolean</has_previous_context>
-        <continuing_sections>[List of ongoing section contexts]</continuing_sections>
-      </context_awareness>
-    
-      <accuracy>
-        <overall_percentage>XX%</overall_percentage>
-        <category_scores>
-          <structural_patterns>XX%</structural_patterns>
-          <hierarchical_continuity>XX%</hierarchical_continuity>
-        </category_scores>
-      </accuracy>
-    
-      <violations>
-        <critical>[Pattern violations with examples]</critical>
-        <major>[Hierarchy issues with context]</major>
-        <minor>[Improvement suggestions]</minor>
-      </violations>
-    
-      <recommendations>
-        <structural>[Pattern improvement suggestions]</structural>
-        <hierarchical>[Context-aware hierarchy fixes]</hierarchical>
-      </recommendations>
-    </analysis>
-    
-    Think carefully about context when evaluating. Focus on pattern integrity and logical flow.
-    %OUTPUT REQUIREMENT MUST BE SAME PATTERN OTHERWISE YOU WILL BE PENALIZED%`
+You are a Document Structure Validator with Enhanced List Focus. Prioritize:
+
+# CORE EVALUATION CRITERIA (100% weight)
+
+1. **List Integrity** (50% weight)
+   - Strict title-description pairs
+   - Valid parent relationships
+   - Chunk continuity enforcement
+
+2. **Hierarchy Validation** (30% weight)
+   - Logical heading progression
+   - Depth consistency
+   - Cross-chunk section flow
+
+3. **Global Structure** (20% weight)
+   - Table/Code-block formatting
+   - Body text relationships
+   - Metadata completeness
+
+# DETAILED VALIDATION RULES
+
+<validation_matrix>
+  <!-- Lists (50%) -->
+  <list_rules>
+    <critical>
+      - Missing description: -25% per item
+      - Invalid parent: -30%
+      - Broken continuation: -40%
+    </critical>
+    <major>
+      - Mixed list types: -15%
+      - Depth mismatch: -10%
+    </major>
+  </list_rules>
+
+  <!-- Headings (30%) -->
+  <heading_rules>
+    <critical>
+      - H1 without title: -25% (first chunk only)
+      - H3 without H2: -20%
+    </critical>
+    <major>
+      - Depth jump >1 level: -10%/jump
+      - Orphaned heading: -15%
+    </major>
+  </heading_rules>
+
+  <!-- Global (20%) -->
+  <global_rules>
+    <critical>
+      - Malformed tables: -15%
+      - Code without language: -10%
+    </critical>
+    <major>
+      - Missing metadata: -5%
+      - Invalid references: -8%
+    </major>
+  </global_rules>
+</validation_matrix>
+
+# OUTPUT REQUIREMENTS
+
+<validation_report format="xml_strict">
+  <list_analysis weight="50%">
+    <total_lists>{count}</total_lists>
+    <valid_lists>
+      <list id="list_001" score="100%"/>
+    </valid_lists>
+    <invalid_lists>
+      <list id="list_002">
+        <errors>
+          <missing_description>2 items</missing_description>
+          <parent_mismatch>h1_003</parent_mismatch>
+        </errors>
+        <penalty>-55%</penalty>
+      </list>
+    </invalid_lists>
+  </list_analysis>
+
+  <hierarchy_analysis weight="30%">
+    <depth_violations>
+      <jump from="1" to="3" count="1"/>
+    </depth_violations>
+    <orphaned_headings>
+      <heading id="h2_004"/>
+    </orphaned_headings>
+    <penalty>-25%</penalty>
+  </hierarchy_analysis>
+
+  <global_analysis weight="20%">
+    <table_errors count="2"/>
+    <code_errors count="1"/>
+    <penalty>-15%</penalty>
+  </global_analysis>
+
+  <final_score>
+    <total>65%</total>
+    <thresholds>
+      <critical>Below 60% → Reprocess</critical>
+      <warning>60-80% → Review</warning>
+    </thresholds>
+  </final_score>
+</validation_report>
+
+# VALIDATION EXAMPLES
+
+<valid_structure>
+  <!-- List Example -->
+  <list id="list_001" category="LIST_BULLET">
+    <items>
+      <item>
+        <title>Quantum State</title>
+        <description>Representation of qubit configuration</description>
+      </item>
+    </items>
+    <parent>h1_001</parent>
+    <depth>2</depth>
+  </list>
+
+  <!-- Hierarchy Example -->
+  <hierarchy>
+    <h1 id="h1_001">Introduction</h1>
+    <h2 id="h2_001">Background</h2>
+    <h3 id="h3_001">History</h3>
+  </hierarchy>
+</valid_structure>
+
+<invalid_structure>
+  <!-- Bad List -->
+  <list id="list_002" category="LIST_NUMBERED">
+    <items>
+      <item>
+        <title>Error Correction</title> <!-- Missing description -->
+      </item>
+    </items>
+    <parent>body_001</parent> <!-- Invalid parent -->
+  </list>
+
+  <!-- Bad Hierarchy -->
+  <hierarchy>
+    <h1 id="h1_001">Main Section</h1>
+    <h3 id="h3_001">Subsection</h3> <!-- Missing H2 -->
+  </hierarchy>
+</invalid_structure>
+
+# ENFORCEMENT PROTOCOL
+1. List errors trigger immediate alerts
+2. Hierarchy errors generate warnings
+3. Global errors log for batch correction
+4. Score <60% → Full reprocessing
+5. Repeated offenders → Model retraining
+          `
         },
         {
           "role": "user",
@@ -1096,8 +1149,8 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
     INPUT:
     {
       "json_structure": ${JSON.stringify(input_json)},
-      "has_previous_context": ${previous_json ? "true" : "false"},
-      "previous_json": ${JSON.stringify(previous_json)}
+      "isFirstChunk": ${previous_json ? "false" : "true"},
+      "previous_chunk_JSON": ${JSON.stringify(previous_json)}
     }
     
     INSTRUCTIONS:
@@ -1106,81 +1159,7 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
     3. Assess hierarchical continuity in context
     4. Generate targeted recommendations
     
-    %MAKE SURE TO PUT HEAVY PENALTY IF SOMEONE DON'T FOLLOW THE STRUTURE OF LISTS and TABLES (if present) %
-    %SAMPLE STRUTURE FOR LIST and TABLE_HEADER%
-      ${JSON.stringify(
-      {
-        id: "list_bullet_001",
-        category: "LIST_BULLET",
-        content: {
-          items: [
-            {
-              title: "First Bullet Point",
-              description: "Detailed explanation of the first bullet point",
-            },
-            {
-              title: "Second Bullet Point",
-              description: "Detailed explanation of the second bullet point",
-            },
-          ],
-        },
-        relationships: {
-          parent: "h1_001",
-          children: [],
-          siblings: ["body_001"],
-          references: [],
-        },
-        metadata: {
-          depth: 2,
-          sequence: 6,
-        },
-      },
-      {
-        id: "list_numbered_001",
-        category: "LIST_NUMBERED",
-        content: {
-          items: [
-            {
-              title: "First Step",
-              description: "Detailed explanation of step one",
-            },
-            {
-              title: "Second Step",
-              description: "Detailed explanation of step two",
-            },
-          ],
-        },
-        relationships: {
-          parent: "h1_002",
-          children: [],
-          siblings: [],
-          references: [],
-        },
-        metadata: {
-          depth: 2,
-          sequence: 7,
-        },
-      },
-      
-      {
-        id: "table_001",
-        category: "TABLE_HEADER",
-        content: {
-          columns: ["Column 1", "Column 2", "Column 3"],
-          alignment: ["left", "center", "right"],
-        },
-        relationships: {
-          parent: "h1_002",
-          children: ["table_content_001"],
-          siblings: [],
-          references: [],
-        },
-        metadata: {
-          depth: 2,
-          sequence: 9,
-        },
-      }
-    )}
+    
       
 
       
@@ -1201,23 +1180,13 @@ export async function LLMEvaluator(input_json: Object , previous_json: Object) {
     response.body.choices[0].message.content
   );
   console.log(json_resposne);
-  let accuracy = json_resposne["analysis"]["accuracy"][
-    "overall_percentage"
+  let accuracy = json_resposne["validation_report"]["final_score"][
+    "total"
   ];
   console.log("Accuracy\n\n", accuracy);
   if (typeof(accuracy)==="string") accuracy = accuracy.slice(0, -1);
 
-  const suggestions = {
-    structural:
-      json_resposne["analysis"]["recommendations"]["structural"],
-    hierarchical:
-      json_resposne["analysis"]["recommendations"]["hierarchical"],
-  };
-  const violations = {
-    critical: json_resposne["analysis"]["violations"]["critical"],
-    major: json_resposne["analysis"]["violations"]["major"],
-    minor: json_resposne["analysis"]["violations"]["minor"],
-  };
+  const suggestions = json_resposne
   
-  return { accuracy, suggestions, violations };
+  return { accuracy, suggestions };
 }

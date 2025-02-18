@@ -35,11 +35,11 @@ const userController = {
     for await (const chunk of chunks) {
       let formatterJSON = await LlmHandler(chunk, prevRes , false);
       console.log("JSON\n\n" , formatterJSON , "\n\n");
-      const {accuracy , violations , suggestions } = await LLMEvaluator(formatterJSON , prevRes);
+      const {accuracy  , suggestions } = await LLMEvaluator(formatterJSON , prevRes);
 
       if (parseInt(accuracy,10) < 90 )
       {
-        formatterJSON = await LlmHandler(chunk, formatterJSON , true , violations , suggestions ); 
+        formatterJSON = await LlmHandler(chunk, formatterJSON , true  , suggestions ); 
         const {accuracy } = await LLMEvaluator(formatterJSON , prevRes);
         console.log("Accuracy is less than 80% , New Accuracy is ", accuracy , "\n\n");
       }

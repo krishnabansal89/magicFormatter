@@ -9,10 +9,10 @@ import { platform } from "os";
 const userController = {
   format: async (req: Request, res: Response) => {
     const { rawText } = req.body;
-    
+    const process_Id = uIdGenerator();
     try{
     const chunks = smartChunker(rawText);
-    const process_Id = uIdGenerator();
+    
     const userEmail = req.headers.email;
     const user = await UserModel.findOne({ email: userEmail });
 
@@ -60,6 +60,7 @@ const userController = {
     );
   }
   catch (error) {
+    await QueryModel.updateOne({ processId: process_Id }, { status: "Error" });
     const log = new LoggerModel({ text: rawText, status: "Error", error: error.message });
     await log.save();
     res.status(500).send("Error occured");

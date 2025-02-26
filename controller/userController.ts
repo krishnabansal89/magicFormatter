@@ -1,10 +1,9 @@
-import { query, Request, Response } from "express";
+import {  Request, Response } from "express";
 import { smartChunker, uIdGenerator } from "../utils/utilsFunc";
 import LlmHandler , {LLMEvaluator} from "../utils/llm";
 import { QueryModel } from "../models/queryModel";
 import { UserModel } from "../models/userModel";
 import { LoggerModel } from "../models/logger";
-import { platform } from "os";
 
 const userController = {
   format: async (req: Request, res: Response) => {
@@ -82,6 +81,7 @@ const userController = {
     const user = await UserModel.findOne({ email });
     if (!user) {
       res.status(404).send("User not found");
+      return;
     }
     const queries = await QueryModel.find({ userId: user.id });
     res.status(200).json({ email: user.email, name: user.name , queries , plan: user.plan });

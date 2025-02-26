@@ -1,5 +1,5 @@
-import { Schema, model } from "mongoose";
-
+import { Schema, model , Mixed } from "mongoose";
+import { REGULAR_STYLE_CONFIG } from "../utils/styleConfig";
 export interface User {
   name: string;
   email: string;
@@ -8,6 +8,7 @@ export interface User {
   planExpiry: Date;
   createdAt: Date;
   queries?: string[];
+  styleConfig: Object;
 }
 
 const userSchema = new Schema<User>({
@@ -18,6 +19,7 @@ const userSchema = new Schema<User>({
   planExpiry: { type: Date },
   createdAt: { type: Date, required: true, default: Date.now },
   queries: { type: [String] },
+  styleConfig:{type: Schema.Types.Mixed, default: REGULAR_STYLE_CONFIG}
 });
 
 export const UserModel = model<User>("User", userSchema);

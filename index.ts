@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from "express";
 import bodyParser from "body-parser";
 import { db } from "./utils/db";
 import UserRouter from "./routes/userRoutes";
+import configRouter from "./routes/configRouter";
 try {
   // Load .env file only if dotenv is installed
   const dotenv = require("dotenv");
@@ -37,7 +38,7 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 app.use("/user", UserRouter);
-
+app.use("/config",configRouter);
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

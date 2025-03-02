@@ -26,27 +26,31 @@ const userController = {
     const newQuery = new QueryModel(query);
     await newQuery.save();
 
-    res.status(200).send({ processId: process_Id });
 
     let prevRes = {};
     const formattedText = [];
+     const formatterJSON = await LlmHandler(rawText);
+     formattedText.push(formatterJSON);
+     console.log("Formatted Text\n\n" , formattedText , "\n\n");
+  //   for await (const chunk of chunks) {
+  //     console.log("Chunk\n\n" , chunk , "\n\n") , 
+  //     console.log("Previous Result\n\n" , prevRes , "\n\n");
+  //     let formatterJSON = 
+  //     console.log("JSON\n\n" , formatterJSON , "\n\n");
+  //     // const {accuracy  , suggestions } = await LLMEvaluator(formatterJSON , prevRes);
+  //     const {accuracy  , suggestions } = {accuracy : '95' , suggestions : []};
 
-    for await (const chunk of chunks) {
-      let formatterJSON = await LlmHandler(chunk, prevRes , false);
-      console.log("JSON\n\n" , formatterJSON , "\n\n");
-      const {accuracy  , suggestions } = await LLMEvaluator(formatterJSON , prevRes);
+  //     if (parseInt(accuracy,10) < 90 )
+  //     {
+  //       formatterJSON = await LlmHandler(chunk, formatterJSON , true  , suggestions  ); 
+  //       const {accuracy } = await LLMEvaluator(formatterJSON , prevRes);
+  //       console.log("Accuracy is less than 80% , New Accuracy is ", accuracy , "\n\n");
+  //     }
 
-      if (parseInt(accuracy,10) < 90 )
-      {
-        formatterJSON = await LlmHandler(chunk, formatterJSON , true  , suggestions ); 
-        const {accuracy } = await LLMEvaluator(formatterJSON , prevRes);
-        console.log("Accuracy is less than 80% , New Accuracy is ", accuracy , "\n\n");
-      }
-
-      prevRes = formatterJSON;
-      formattedText.push(formatterJSON);
+  //     prevRes = formatterJSON;
+  //     formattedText.push(formatterJSON);
       
-  }
+  // }
     newQuery.status = "Completed";
     newQuery.result = formattedText;
     await newQuery.save();
@@ -57,12 +61,15 @@ const userController = {
       { email: userEmail },
       { $push: { queries: process_Id } }
     );
+
+    return res.status(200).json({ processId: process_Id });
   }
   catch (error) {
     await QueryModel.updateOne({ processId: process_Id }, { status: "Error" });
     const log = new LoggerModel({ text: rawText, status: "Error", error: error.message });
     await log.save();
-    res.status(500).send("Error occured");
+    console.log(error);
+    return res.status(500).send("Error occured");
   }
     
   },
@@ -71,7 +78,7 @@ const userController = {
     const { processId } = req.params;
     const query = await QueryModel.findOne({ processId });
     if (!query) {
-      res.status(404).send("Query not found");
+      return res.status(404).send("Query not found");
     }
     res.status(200).send(query);
   },
@@ -91,7 +98,7 @@ const userController = {
     const { email, name } = req.body;
     const user = await UserModel.findOne({ email });
     if (user) {
-      res.status(400).send("User already exists");
+      return res.status(400).send("User already exists");
     }
     const newUser = new UserModel({ email, name });
     await newUser.save();

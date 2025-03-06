@@ -62,14 +62,14 @@ const userController = {
       { $push: { queries: process_Id } }
     );
 
-    return res.status(200).json({ processId: process_Id });
+    res.status(200).json({ processId: process_Id });
   }
   catch (error) {
     await QueryModel.updateOne({ processId: process_Id }, { status: "Error" });
     const log = new LoggerModel({ text: rawText, status: "Error", error: error.message });
     await log.save();
     console.log(error);
-    return res.status(500).send("Error occured");
+    res.status(500).send("Error occured");
   }
     
   },
@@ -78,7 +78,7 @@ const userController = {
     const { processId } = req.params;
     const query = await QueryModel.findOne({ processId });
     if (!query) {
-      return res.status(404).send("Query not found");
+      res.status(404).send("Query not found");
     }
     res.status(200).send(query);
   },
@@ -88,7 +88,6 @@ const userController = {
     const user = await UserModel.findOne({ email });
     if (!user) {
       res.status(404).send("User not found");
-      return;
     }
     const queries = await QueryModel.find({ userId: user.id });
     res.status(200).json({ email: user.email, name: user.name , queries , plan: user.plan });
@@ -98,7 +97,7 @@ const userController = {
     const { email, name } = req.body;
     const user = await UserModel.findOne({ email });
     if (user) {
-      return res.status(400).send("User already exists");
+      res.status(400).send("User already exists");
     }
     const newUser = new UserModel({ email, name });
     await newUser.save();
